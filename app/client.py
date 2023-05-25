@@ -7,9 +7,8 @@ import httpx
 
 class Client:
     """Lingvo Live API client."""
-    ServiceURL = 'https://developers.lingvolive.com/'
-    UserAgent = 'LingCApp/0.1'
-    TokenTLL = 86340  # 24 hours - 1 minute
+    SERVICE_URL = 'https://developers.lingvolive.com/'
+    USER_AGENT = 'LingCApp/0.1'
 
     def __init__(self, key: str, timeout: float, logger: Logger) -> None:
         self.key = key
@@ -19,20 +18,23 @@ class Client:
         self.logger = logger
 
     @property
-    def headers(self) -> dict[str, str]:
+    def base_headers(self) -> dict[str, str]:
         return {
-            'User-Agent': self.UserAgent,
+            'User-Agent': self.USER_AGENT,
             'Content-Length': '0',
         }
 
-    def authenticate(self) -> bool:
-        url = 'api/v1.1/authenticate'
-        full_path = urljoin(self.ServiceURL, url)
-        headers = self.headers
+    def url(self, path: str) -> str:
+        """Returns full URL for custom request path."""
+        return urljoin(self.SERVICE_URL, path)
 
+    def authenticate(self) -> bool:
+        url = self.url('api/v1.1/authenticate')
+        headers = self.base_headers
         headers.update({'Authorization': f'Basic {self.key}'})
+
         try:
-            response = httpx.post(full_path, headers=headers, timeout=self.timeout)
+            response = httpx.post(url, headers=headers, timeout=self.timeout)
         except httpx.RequestError as exc:
             self.logger.error(f'Error: {exc}')
             return False

@@ -15,6 +15,8 @@ class Params:
     key: str
     direction: str
     timeout: float
+    src: Language
+    dst: Language
     cache_path: str = ''
     verbose: bool = False
 
@@ -27,12 +29,8 @@ class Params:
 
 
 class Handler:
-    LANG_CHOICES = [
-        'auto',
-        '{}-{}'.format(Language.EN.name.lower(), Language.RU.name.lower()),
-        '{}-{}'.format(Language.RU.name.lower(), Language.EN.name.lower()),
-    ]
-    CACHE_EXPIRED_FORMAT = '%Y-%m-%d %H:%M:%S'
+    EXPIRED_TTL_FORMAT = '%Y-%m-%d %H:%M:%S'
+    TOKEN_TLL = 86340  # token time to live (seconds), 24 hours - 1 minute
 
     def __init__(self, params: Params) -> None:
         self.key = params.key
@@ -40,11 +38,14 @@ class Handler:
         self.timeout = params.timeout
         self.cache_file = params.cache_file
 
-        self.logger = self._build_logger(params.verbose)
+        self.src = params.src
+        self.dst = params.dst
+
+        self.logger = self.build_logger(params.verbose)
         self.client = Client(self.key, self.timeout, self.logger)
 
     @staticmethod
-    def _build_logger(verbose: bool) -> logging.Logger:
+    def build_logger(verbose: bool) -> logging.Logger:
         level = logging.DEBUG if verbose else logging.WARNING
 
         logger = logging.getLogger('lingcapp')
@@ -70,7 +71,7 @@ class Handler:
             return None
 
         # data format: {'token': '', 'expired': 'YYYY-MM-DD HH:MM:SS'}, with UTC timezone
-        expired = datetime.strptime(data['expired'], self.CACHE_EXPIRED_FORMAT)
+        expired = datetime.strptime(data['expired'], self.EXPIRED_TTL_FORMAT)
         now = datetime.utcnow()
 
         if now > expired:
@@ -84,16 +85,16 @@ class Handler:
         if not (self.cache_file and self.client.token):
             return
 
-        expired = datetime.utcnow() + timedelta(seconds=self.client.TokenTLL)
+        expired = datetime.utcnow() + timedelta(seconds=self.TOKEN_TLL)
         data = {
             'token': self.client.token,
-            'expired': expired.strftime(self.CACHE_EXPIRED_FORMAT),
+            'expired': expired.strftime(self.EXPIRED_TTL_FORMAT),
         }
         with open(self.cache_file, 'w') as f:
             json.dump(data, f)
 
-    def prepare(self) -> bool:
-        """It checks file cache and does authentication if necessary."""
+    def auth(self) -> bool:
+        """It checks file cache and does authentication request if necessary."""
         if token := self._read_cache():
             self.client.token = token
             return True

@@ -1,2 +1,2 @@
 from .handler import Handler, Params
-from .languages import Language
+from .languages import LANGUAGE_CHOICES, Language
