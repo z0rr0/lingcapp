@@ -4,7 +4,7 @@ This is a simple python client for [Lingvo Live API](https://www.lingvolive.com/
 
 ## Usage
 
-```sh
+```
 python3 main.py --help
 
 usage: main.py [-h] [-v] [-t TIMEOUT] [-c CACHE] [-d {auto,en-ru,ru-en}] [-k KEY] words [words ...]
@@ -63,3 +63,7 @@ LingvoUniversal (En-Ru) 640.30 ms
 2023-05-26 16:35:48,441 DEBUG: total duration: 649.94 ms
 ```
 
+## License
+
+This source code is governed by a MIT license that can be found
+in the [LICENSE](https://github.com/z0rr0/lingcapp/blob/main/LICENSE) file.
