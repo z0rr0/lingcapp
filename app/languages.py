@@ -18,7 +18,7 @@ class Language(IntEnum):
         return cls[lang.upper()]
 
     @classmethod
-    def find_src(cls, word: str, n: int = 3) -> 'Language':
+    def choose_src(cls, word: str, n: int = 3) -> 'Language':
         """Returns source language for word by first N letters."""
         if not word:
             raise ValueError('word is empty')
@@ -29,7 +29,7 @@ class Language(IntEnum):
     @classmethod
     def parse(cls, choice: str, word: str) -> tuple['Language', 'Language']:
         if choice == AUTO_CHOICE:
-            src = cls.find_src(word)
+            src = cls.choose_src(word)
             dst = cls.RU if src == cls.EN else cls.EN
             return src, dst
 

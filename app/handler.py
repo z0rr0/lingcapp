@@ -1,9 +1,13 @@
+import asyncio
 import json
 import logging
-import os.path
+import os
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
+
+import httpx
 
 from .client import Client
 from .languages import Language
@@ -42,7 +46,7 @@ class Handler:
         self.dst = params.dst
 
         self.logger = self.build_logger(params.verbose)
-        self.client = Client(self.key, self.timeout, self.logger)
+        self.client = Client(self.key, self.timeout, self.logger, params.verbose)
 
     @staticmethod
     def build_logger(verbose: bool) -> logging.Logger:
@@ -62,20 +66,18 @@ class Handler:
 
     def _read_cache(self) -> Optional[str]:
         if not (self.cache_file and os.path.isfile(self.cache_file)):
-            return None
+            return
 
         with open(self.cache_file, 'r') as f:
             data = json.load(f)
 
         if not (data and 'token' in data and 'expired' in data):
-            return None
+            return
 
-        # data format: {'token': '', 'expired': 'YYYY-MM-DD HH:MM:SS'}, with UTC timezone
+        # data format: {'token': 'XXX', 'expired': 'YYYY-MM-DD HH:MM:SS'}, with UTC timezone
         expired = datetime.strptime(data['expired'], self.EXPIRED_TTL_FORMAT)
-        now = datetime.utcnow()
-
-        if now > expired:
-            return None
+        if datetime.utcnow() > expired:
+            return
 
         self.logger.debug('read token from file cache')
         return data['token']
@@ -90,7 +92,9 @@ class Handler:
             'token': self.client.token,
             'expired': expired.strftime(self.EXPIRED_TTL_FORMAT),
         }
-        with open(self.cache_file, 'w') as f:
+
+        self.logger.debug(f'write token to file cache {self.cache_file}')
+        with open(self.cache_file, 'w', opener=lambda path, flags: os.open(path, flags, mode=0o600)) as f:
             json.dump(data, f)
 
     def auth(self) -> bool:
@@ -102,9 +106,21 @@ class Handler:
         ok = self.client.authenticate()
         self.logger.debug(f'no cache, authenticate: {ok}')
 
-        if ok:
-            self._write_cache()
-        return ok
+        # if ok is True, then the cache will be written without result change (always True)
+        # otherwise - skip cache writing
+        return ok and (self._write_cache() or True)
 
     async def run(self, words: list[str]) -> None:
-        pass
+        start = time.monotonic_ns()
+        async with httpx.AsyncClient(http2=True, timeout=self.timeout) as ac:
+            tasks = [
+                self.client.mini_card(ac, word, self.src.value, self.dst.value)
+                for word in words
+            ]
+            results = await asyncio.gather(*tasks)
+
+        for result in (r for r in results if r):
+            print(f'\n{result.pretty}')
+
+        duration = self.client.duration_ms_from(start)
+        self.logger.debug(f'total duration: {duration:.2f} ms')
