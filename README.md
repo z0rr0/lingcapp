@@ -46,7 +46,7 @@ python3 main.py книга
 LingvoUniversal (Ru-En)
 ```
 
-Verbose mode show additional information:
+Verbose mode shows additional information:
 
 ```sh
 python3 main.py -v lion panther tiger
