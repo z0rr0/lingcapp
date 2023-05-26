@@ -1,6 +1,8 @@
 # LingCApp
 
-This is a simple python client for [Lingvo Live API](https://www.lingvolive.com/). 
+This is a simple python client for [Lingvo Live API](https://www.lingvolive.com/).
+
+API key can be obtained from [here](https://developers.lingvolive.com/).
 
 ## Usage
 
